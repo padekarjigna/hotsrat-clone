@@ -28,7 +28,7 @@ data "aws_vpc" "default" {
 }
 
 # Get Public Subnets in Supported Availability Zones
-data "aws_subnet_ids" "public" {
+data "aws_subnet_id" "public" {
   vpc_id = data.aws_vpc.default.id
 }
 
