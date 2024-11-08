@@ -28,13 +28,13 @@ data "aws_vpc" "default" {
 }
 
 # Get Public Subnets in Supported Availability Zones
-data "aws_subnet_id" "public" {
-  vpc_id = data.aws_vpc.default.id
+data "aws_subnet_ids" "public" {
+  vpc_id = data.aws_vpc.default.ids
 }
 
 data "aws_subnet" "filtered_subnets" {
-  count = length(data.aws_subnet_ids.public.id)
-  id    = data.aws_subnet_id.public.id[count.index]
+  count = length(data.aws_subnet_ids.public.ids)
+  id    = data.aws_subnet_ids.public.ids[count.index]
 
   # Filter only supported Availability Zones for EKS control plane
   filter {
