@@ -33,8 +33,8 @@ data "aws_subnet_id" "public" {
 }
 
 data "aws_subnet" "filtered_subnets" {
-  count = length(data.aws_subnet_ids.public.ids)
-  id    = data.aws_subnet_ids.public.ids[count.index]
+  count = length(data.aws_subnet_ids.public.id)
+  id    = data.aws_subnet_id.public.id[count.index]
 
   # Filter only supported Availability Zones for EKS control plane
   filter {
@@ -94,7 +94,7 @@ resource "aws_eks_node_group" "example" {
   cluster_name    = aws_eks_cluster.example.name
   node_group_name = "Node-cloud"
   node_role_arn   = aws_iam_role.eks_node_group_role.arn
-  subnet_ids      = [for subnet in data.aws_subnet.filtered_subnets : subnet.id]
+  subnet_ids    = [for subnet in data.aws_subnet.filtered_subnets : subnet.id]
 
   scaling_config {
     desired_size = 1
