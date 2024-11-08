@@ -21,38 +21,28 @@ resource "aws_iam_role_policy_attachment" "example-AmazonEKSClusterPolicy" {
   role       = aws_iam_role.example.name
 }
 
-#get VPC data
+#get vpc data
 data "aws_vpc" "default" {
   default = true
 }
-
-#get public subnets for cluster, filtering by VPC ID and ensuring they span multiple AZs
+#get public subnets for cluster
 data "aws_subnets" "public" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
 }
-
-# Modify to select subnets in different AZs explicitly
-data "aws_subnet_ids" "selected" {
-  vpc_id = data.aws_vpc.default.id
-}
-
-resource "aws_subnet" "selected" {
-  for_each = toset([data.aws_subnet_ids.selected.ids[0], data.aws_subnet_ids.selected.ids[1]])
-  id       = each.key
-}
-
 #cluster provision
 resource "aws_eks_cluster" "example" {
   name     = "EKS_CLOUD"
   role_arn = aws_iam_role.example.arn
 
   vpc_config {
-    subnet_ids = [aws_subnet.selected[0].id, aws_subnet.selected[1].id] # Ensure these subnets are in different AZs
+    subnet_ids = data.aws_subnets.public.ids
   }
 
+  # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
+  # Otherwise, EKS will not be able to properly delete EKS managed EC2 infrastructure such as Security Groups.
   depends_on = [
     aws_iam_role_policy_attachment.example-AmazonEKSClusterPolicy,
   ]
@@ -93,7 +83,7 @@ resource "aws_eks_node_group" "example" {
   cluster_name    = aws_eks_cluster.example.name
   node_group_name = "Node-cloud"
   node_role_arn   = aws_iam_role.example1.arn
-  subnet_ids      = [aws_subnet.selected[0].id, aws_subnet.selected[1].id]
+  subnet_ids      = data.aws_subnets.public.ids
 
   scaling_config {
     desired_size = 1
@@ -102,6 +92,8 @@ resource "aws_eks_node_group" "example" {
   }
   instance_types = ["t2.medium"]
 
+  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
+  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
   depends_on = [
     aws_iam_role_policy_attachment.example-AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.example-AmazonEKS_CNI_Policy,
